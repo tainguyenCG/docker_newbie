@@ -7,7 +7,7 @@ services:
       MSSQL_SA_PASSWORD: ${SA_PASSWORD:-YourStrong@Passw0rd}
       MSSQL_PID: Developer
     ports:
-      - "1433:1433"
+      - "127.0.0.1:1433:1433"
     volumes:
       - mssql_data:/var/opt/mssql
     healthcheck:
@@ -29,7 +29,7 @@ services:
       MSSQL_DATABASE: ${MSSQL_DATABASE:-LandingDB}
       JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -37,8 +37,10 @@ services:
   client:
     build: ./frontend-client
     container_name: landing_client
+    environment:
+      HOST: 0.0.0.0
     ports:
-      - "4321:4321"
+      - "127.0.0.1:4321:4321"
     depends_on:
       - backend
 
@@ -47,8 +49,9 @@ services:
     container_name: landing_admin
     environment:
       PORT: 4322
+      HOST: 0.0.0.0
     ports:
-      - "4322:4322"
+      - "127.0.0.1:4322:4322"
     depends_on:
       - backend
 
