@@ -1,0 +1,264 @@
+---
+import AdminLayout from '../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dashboard - Admin">
+  <main class="mx-auto max-w-6xl p-8">
+    <div class="mb-6 flex items-center justify-between">
+      <h1 class="text-2xl font-bold">Quản lý nội dung</h1>
+      <button
+        id="btnAdd"
+        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+      >
+        + Thêm mục mới
+      </button>
+    </div>
+
+    <p id="loading" class="text-slate-500">Đang tải dữ liệu...</p>
+    <p id="errorBox" class="hidden rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600"></p>
+
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-4 py-3">SectionKey</th>
+            <th class="px-4 py-3">Tiêu đề</th>
+            <th class="px-4 py-3">Subtitle</th>
+            <th class="px-4 py-3">Thứ tự</th>
+            <th class="px-4 py-3">Cập nhật</th>
+            <th class="px-4 py-3 text-right">Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="tbody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <dialog id="dialog" class="w-full max-w-lg rounded-2xl p-0 backdrop:bg-black/40">
+    <form id="form" class="p-6">
+      <h2 id="dialogTitle" class="mb-4 text-lg font-bold">Sửa mục</h2>
+
+      <div class="space-y-4">
+        <div>
+          <label for="fKey" class="block text-sm font-medium text-slate-700">SectionKey</label>
+          <input
+            id="fKey"
+            type="text"
+            required
+            pattern="[a-zA-Z0-9_\-]+"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label for="fTitle" class="block text-sm font-medium text-slate-700">Tiêu đề</label>
+          <input
+            id="fTitle"
+            type="text"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label for="fSubtitle" class="block text-sm font-medium text-slate-700">Subtitle</label>
+          <input
+            id="fSubtitle"
+            type="text"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label for="fDescription" class="block text-sm font-medium text-slate-700">Mô tả</label>
+          <textarea
+            id="fDescription"
+            rows="4"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none"></textarea>
+        </div>
+        <div>
+          <label for="fSort" class="block text-sm font-medium text-slate-700">Thứ tự hiển thị</label>
+          <input
+            id="fSort"
+            type="number"
+            value="0"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          id="btnCancel"
+          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
+        >
+          Hủy
+        </button>
+        <button
+          type="submit"
+          class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+        >
+          Lưu
+        </button>
+      </div>
+    </form>
+  </dialog>
+</AdminLayout>
+
+<script>
+  const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+  const token = localStorage.getItem('token');
+  if (!token) location.replace('/login');
+
+  let items = [];
+  const tbody = document.getElementById('tbody');
+  const dialog = document.getElementById('dialog');
+  const form = document.getElementById('form');
+  const errorBox = document.getElementById('errorBox');
+
+  const esc = (s) =>
+    String(s ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[c]);
+
+  const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
+  function forceLogin() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    location.replace('/login');
+  }
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.classList.remove('hidden');
+  }
+
+  async function load() {
+    try {
+      const res = await fetch(`${API_URL}/api/content`, { headers: authHeaders });
+      if (res.status === 401) return forceLogin();
+      if (!res.ok) return showError('API trả về lỗi khi tải danh sách');
+      items = await res.json();
+      render();
+    } catch {
+      document.getElementById('loading').classList.add('hidden');
+      showError('Không kết nối được API. Kiểm tra backend đã chạy chưa.');
+    }
+  }
+
+  function render() {
+    document.getElementById('loading').classList.add('hidden');
+    errorBox.classList.add('hidden');
+    if (items.length === 0) {
+      tbody.innerHTML =
+        '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">Chưa có nội dung nào</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items
+      .map(
+        (it) => `
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3 font-mono text-xs text-indigo-600">${esc(it.SectionKey)}</td>
+        <td class="px-4 py-3 font-medium">${esc(it.Title)}</td>
+        <td class="max-w-xs truncate px-4 py-3 text-slate-500">${esc(it.Subtitle)}</td>
+        <td class="px-4 py-3">${it.SortOrder}</td>
+        <td class="px-4 py-3 text-slate-500">${new Date(it.UpdatedAt).toLocaleString('vi-VN')}</td>
+        <td class="px-4 py-3 text-right">
+          <button data-act="edit" data-id="${it.Id}" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-100">Sửa</button>
+          <button data-act="delete" data-id="${it.Id}" class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">Xóa</button>
+        </td>
+      </tr>`
+      )
+      .join('');
+  }
+
+  tbody.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+
+    if (btn.dataset.act === 'edit') {
+      const it = items.find((i) => i.Id === id);
+      if (!it) return;
+      document.getElementById('dialogTitle').textContent = `Sửa mục: ${it.SectionKey}`;
+      document.getElementById('fId')?.remove();
+      form.dataset.id = String(it.Id);
+      const fKey = document.getElementById('fKey');
+      fKey.value = it.SectionKey;
+      fKey.disabled = true;
+      document.getElementById('fTitle').value = it.Title ?? '';
+      document.getElementById('fSubtitle').value = it.Subtitle ?? '';
+      document.getElementById('fDescription').value = it.Description ?? '';
+      document.getElementById('fSort').value = it.SortOrder ?? 0;
+      dialog.showModal();
+    }
+
+    if (btn.dataset.act === 'delete') {
+      if (!confirm('Bạn chắc chắn muốn xóa mục này?')) return;
+      try {
+        const res = await fetch(`${API_URL}/api/content/${id}`, {
+          method: 'DELETE',
+          headers: authHeaders,
+        });
+        if (res.status === 401) return forceLogin();
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          showError(data.message || 'Xóa thất bại');
+          return;
+        }
+        load();
+      } catch {
+        showError('Không kết nối được API');
+      }
+    }
+  });
+
+  document.getElementById('btnAdd').addEventListener('click', () => {
+    document.getElementById('dialogTitle').textContent = 'Thêm mục mới';
+    delete form.dataset.id;
+    form.reset();
+    const fKey = document.getElementById('fKey');
+    fKey.disabled = false;
+    document.getElementById('fSort').value = 0;
+    dialog.showModal();
+  });
+
+  document.getElementById('btnCancel').addEventListener('click', () => dialog.close());
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const editing = Boolean(form.dataset.id);
+    const payload = {
+      title: document.getElementById('fTitle').value,
+      subtitle: document.getElementById('fSubtitle').value,
+      description: document.getElementById('fDescription').value,
+      sortOrder: Number(document.getElementById('fSort').value || 0),
+    };
+    const url = editing
+      ? `${API_URL}/api/content/${form.dataset.id}`
+      : `${API_URL}/api/content`;
+    if (!editing) payload.sectionKey = document.getElementById('fKey').value.trim();
+
+    try {
+      const res = await fetch(url, {
+        method: editing ? 'PUT' : 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(payload),
+      });
+      if (res.status === 401) return forceLogin();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showError(data.message || 'Lưu thất bại');
+        return;
+      }
+      dialog.close();
+      load();
+    } catch {
+      showError('Không kết nối được API');
+    }
+  });
+
+  load();
+</script>

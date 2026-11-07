@@ -1,0 +1,12 @@
+{
+  "name": "full-stack-docker",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently -n backend,client,admin -c yellow,cyan,magenta \"npm --prefix backend run dev\" \"npm --prefix frontend-client run dev\" \"npm --prefix frontend-admin run dev\"",
+    "sql": "docker compose up -d sqlserver"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

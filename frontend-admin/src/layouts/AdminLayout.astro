@@ -1,0 +1,50 @@
+---
+import '../styles/global.css';
+
+const { title = 'Admin' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-slate-100 text-slate-800 antialiased">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+        <div class="flex items-center gap-6">
+          <span class="text-lg font-bold text-indigo-600">Admin Panel</span>
+          <a href="/dashboard" class="text-sm font-medium hover:text-indigo-600">Nội dung</a>
+          <a href="http://localhost:4321" target="_blank" class="text-sm font-medium hover:text-indigo-600">
+            Xem Landing
+          </a>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="currentUser" class="text-sm text-slate-500"></span>
+          <button
+            id="btnLogout"
+            class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
+          >
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <slot />
+
+    <script>
+      const user = localStorage.getItem('username');
+      const el = document.getElementById('currentUser');
+      if (el && user) el.textContent = `Xin chào, ${user}`;
+
+      document.getElementById('btnLogout')?.addEventListener('click', () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        location.href = '/login';
+      });
+    </script>
+  </body>
+</html>

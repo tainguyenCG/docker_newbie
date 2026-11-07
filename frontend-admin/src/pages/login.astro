@@ -1,0 +1,87 @@
+---
+import '../styles/global.css';
+---
+
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đăng nhập - Admin</title>
+  </head>
+  <body class="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-600 to-violet-600 px-4 antialiased">
+    <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+      <h1 class="text-center text-2xl font-bold text-slate-800">Admin Panel</h1>
+      <p class="mt-2 text-center text-sm text-slate-500">Đăng nhập để quản lý nội dung landing page</p>
+
+      <form id="loginForm" class="mt-8 space-y-4">
+        <div>
+          <label for="username" class="block text-sm font-medium text-slate-700">Tên đăng nhập</label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            required
+            autocomplete="username"
+            placeholder="admin"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          />
+        </div>
+        <div>
+          <label for="password" class="block text-sm font-medium text-slate-700">Mật khẩu</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autocomplete="current-password"
+            placeholder="••••••••"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          />
+        </div>
+
+        <p id="error" class="hidden rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600"></p>
+
+        <button
+          type="submit"
+          class="w-full rounded-lg bg-indigo-600 py-2.5 font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        >
+          Đăng nhập
+        </button>
+      </form>
+    </div>
+
+    <script>
+      const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+
+      document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorEl = document.getElementById('error');
+        errorEl.classList.add('hidden');
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+
+        try {
+          const res = await fetch(`${API_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            errorEl.textContent = data.message || 'Đăng nhập thất bại';
+            errorEl.classList.remove('hidden');
+            return;
+          }
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('username', data.username);
+          location.replace('/dashboard');
+        } catch {
+          errorEl.textContent = 'Không kết nối được API';
+          errorEl.classList.remove('hidden');
+        }
+      });
+    </script>
+  </body>
+</html>
