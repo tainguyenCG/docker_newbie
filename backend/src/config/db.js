@@ -71,6 +71,20 @@ async function createSchema(pool) {
     console.log('[db] Seeded default admin user (admin / admin123)');
   }
 
+  // Đặt/đè mật khẩu admin từ biến môi trường ADMIN_PASSWORD (dùng khi public ra internet)
+  if (process.env.ADMIN_PASSWORD) {
+    const bcrypt = require('bcryptjs');
+    const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+    await pool
+      .request()
+      .input('username', sql.NVarChar, 'admin')
+      .input('hash', sql.NVarChar, hash)
+      .query(`IF EXISTS (SELECT 1 FROM Users WHERE Username = @username)
+              UPDATE Users SET PasswordHash = @hash WHERE Username = @username
+              ELSE INSERT INTO Users (Username, PasswordHash) VALUES (@username, @hash)`);
+    console.log('[db] Admin password synced from ADMIN_PASSWORD env');
+  }
+
   const contentCount = await pool.request().query('SELECT COUNT(*) AS c FROM SiteContent');
   if (contentCount.recordset[0].c === 0) {
     const seed = [
